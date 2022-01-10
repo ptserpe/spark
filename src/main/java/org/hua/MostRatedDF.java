@@ -33,32 +33,36 @@ public class MostRatedDF {
         }
 
         // load
-        Dataset<Row> movies = spark.read().option("header", "true").csv(inputPath+"/movies.csv");
-        Dataset<Row> links = spark.read().option("header", "true").csv(inputPath+"/links.csv");
-        Dataset<Row> ratings = spark.read().option("header", "true").csv(inputPath+"/ratings.csv");
-        Dataset<Row> tags = spark.read().option("header", "true").csv(inputPath+"/tags.csv");
+        Dataset<Row> movies = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/movies.dat");
+        Dataset<Row> ratings = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/ratings.dat");
+
+        //rename columns(header)
+        movies = movies
+                .withColumnRenamed("_c0", "movieId")
+                .withColumnRenamed("_c1", "title")
+                .withColumnRenamed("_c2", "genres");
+
+        ratings = ratings
+                .withColumnRenamed("_c0", "userId")
+                .withColumnRenamed("_c1", "movieId")
+                .withColumnRenamed("_c2", "rating")
+                .withColumnRenamed("_c3", "timestamp");
 
         // schema
         //
         // ratings.csv   userId,movieId,rating,timestamp
         // movies.csv    movieId,title,genres
-        // links.csv     movieId,imdbId,tmdbId
-        // tags.csv      userId,movieId,tag,timestamp
         // print schema
         movies.printSchema();
-        links.printSchema();
         ratings.printSchema();
-        tags.printSchema();
 
         // print some data
-//        movies.show();
-//        links.show();
-//        ratings.show();
-//        tags.show();
+        movies.show();
+        ratings.show();
 
-        // TODO: count all comedies that a user rates at least 3.0
-        //       (join ratings with movies, filter by rating, groupby userid and
-        //        aggregate count)
+        //Query1: Find the 25 most rated movies using dataframes
+        //join ratings with movies, group by title,
+        // aggregate count, order by descending and take the first 25
         Dataset<Row> mostRatedMovies = ratings
                 .join(movies, "movieId")
                 .groupBy(movies.col("title"))
@@ -66,9 +70,11 @@ public class MostRatedDF {
                 .orderBy(col("count").desc())
                 .limit(25);
 
-
+        //show the result
         mostRatedMovies.show(25);
-        //mostRatedMovies.write().format("json").save(outputPath+"/good-comedies-per-user");
+
+        //write the result
+        mostRatedMovies.write().format("json").save(outputPath+"/most-rated-movies");
 
         spark.close();
 

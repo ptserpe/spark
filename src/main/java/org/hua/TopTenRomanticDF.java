@@ -34,48 +34,53 @@ public class TopTenRomanticDF {
         }
 
         // load
-        Dataset<Row> movies = spark.read().option("header", "true").csv(inputPath+"/movies.csv");
-        Dataset<Row> links = spark.read().option("header", "true").csv(inputPath+"/links.csv");
-        Dataset<Row> ratings = spark.read().option("header", "true").csv(inputPath+"/ratings.csv");
-        Dataset<Row> tags = spark.read().option("header", "true").csv(inputPath+"/tags.csv");
+        Dataset<Row> movies = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/movies.dat");
+        Dataset<Row> ratings = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/ratings.dat");
 
+        //rename columns
+        movies = movies
+                .withColumnRenamed("_c0", "movieId")
+                .withColumnRenamed("_c1", "title")
+                .withColumnRenamed("_c2", "genres");
+
+        ratings = ratings
+                .withColumnRenamed("_c0", "userId")
+                .withColumnRenamed("_c1", "movieId")
+                .withColumnRenamed("_c2", "rating")
+                .withColumnRenamed("_c3", "timestamp");
         // schema
         //
         // ratings.csv   userId,movieId,rating,timestamp
         // movies.csv    movieId,title,genres
-        // links.csv     movieId,imdbId,tmdbId
-        // tags.csv      userId,movieId,tag,timestamp
         // print schema
         movies.printSchema();
-        links.printSchema();
         ratings.printSchema();
-        tags.printSchema();
 
         // print some data
 //        movies.show();
-//        links.show();
 //        ratings.show();
-//        tags.show();
 
         // get all comedies
         Dataset<Row> allRomantics = movies.filter(movies.col("genres").like("%Romance%"));
 
+        //find month from timestamp
         Column monthColumn = month(to_timestamp(ratings.col("timestamp").cast(DataTypes.LongType)));
 
+        //Query3: find top ten romantics movies for  December
         Dataset<Row> topTenRomantics = ratings
-                .withColumn("month", monthColumn)
+                .withColumn("month", monthColumn) //add month as column
                 .filter(col("month").equalTo(12)) //filter for December
                 .groupBy(ratings.col("movieId"))
                 .agg(avg(ratings.col(("rating"))).alias("avg_rating")) //avg rating per movie
                 .join(allRomantics, "movieId") // avg rating per romantic movie
-                .orderBy(col("avg_rating").desc()); //sort descending to take top 10
+                .orderBy(col("avg_rating").desc())
+                .limit(10); //sort descending to take top 10
 
-//        long size = topTenRomantics.count();
-//        System.out.println(size);
+        //print result
+        topTenRomantics.show(10);
 
-        //topTenRomantics.show((int)size);
-        topTenRomantics.show(22);
-        //topTenRomantics.write().format("json").save(outputPath+"/top-ten-romantics");
+        //write result
+        topTenRomantics.write().format("json").save(outputPath+"/top-ten-romantics");
 
         spark.close();
 

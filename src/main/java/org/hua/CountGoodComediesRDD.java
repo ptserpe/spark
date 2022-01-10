@@ -8,8 +8,7 @@ import scala.Tuple2;
 
 import java.util.regex.Pattern;
 
-public class GoodComediesPerUserRDD {
-
+public class CountGoodComediesRDD {
     //delimiter to split the dataset
     private static final Pattern DELIMITER = Pattern.compile("::");
 
@@ -53,19 +52,20 @@ public class GoodComediesPerUserRDD {
                     return new Tuple2<>(movieId, new Tuple2<>(title, genres));
                 }).filter(stringTuple2Tuple2 -> stringTuple2Tuple2._2._2.contains("Comedy"));
 
-        //Query2: Count all movies that rated >=3.0(good) per user
-        JavaPairRDD<String, Integer> goodComediesPerUser = ratings //RDD Tuple2<userId, totalRatings >=3>
+        //count all comedies that someone rated at least 3
+        JavaRDD<String> goodComedies = ratings
                 .filter(stringTuple2Tuple2 -> stringTuple2Tuple2._2._2 >= 3.0)//rating >=3.0
-                .join(allComedies)
-                .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1._1, 1)) //new Tuple2<>(userId,1)
-                .reduceByKey(Integer::sum);
+                .join(allComedies) //all comedies with rating >=3
+                .map(stringTuple2Tuple2 ->  stringTuple2Tuple2._2._2._1)
+                .distinct(); //remove duplicates
 
-        //userId, totalRatingsGTE3AtComedies
-        System.out.println(goodComediesPerUser.take(30));
+        //find total good comedies
+        long totalGoodComedies = goodComedies.count();
+        //show the result
+        System.out.println("Total comedies with at least one rating >= 3: " + totalGoodComedies);
 
-        //write the result
-        goodComediesPerUser.saveAsTextFile(args[1]+"/GoodComediesPerUserRDD");
+        //write the movies
+        goodComedies.saveAsTextFile(args[1]+"/GoodComediesRDD");
 
-        sc.stop();
     }
 }

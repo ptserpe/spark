@@ -1,12 +1,11 @@
 package org.hua;
 
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.util.SizeEstimator;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.count;
 
 public class GoodComediesPerUserDF {
 
@@ -35,37 +34,40 @@ public class GoodComediesPerUserDF {
         }
 
         // load
-        Dataset<Row> movies = spark.read().option("header", "true").csv(inputPath+"/movies.csv");
-        Dataset<Row> links = spark.read().option("header", "true").csv(inputPath+"/links.csv");
-        Dataset<Row> ratings = spark.read().option("header", "true").csv(inputPath+"/ratings.csv");
-        Dataset<Row> tags = spark.read().option("header", "true").csv(inputPath+"/tags.csv");
+        Dataset<Row> movies = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/movies.dat");
+        Dataset<Row> ratings = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/ratings.dat");
 
+        movies = movies
+                .withColumnRenamed("_c0", "movieId")
+                .withColumnRenamed("_c1", "title")
+                .withColumnRenamed("_c2", "genres");
+
+        ratings = ratings
+                .withColumnRenamed("_c0", "userId")
+                .withColumnRenamed("_c1", "movieId")
+                .withColumnRenamed("_c2", "rating")
+                .withColumnRenamed("_c3", "timestamp");
         // schema
         //
         // ratings.csv   userId,movieId,rating,timestamp
         // movies.csv    movieId,title,genres
-        // links.csv     movieId,imdbId,tmdbId
-        // tags.csv      userId,movieId,tag,timestamp
+
         // print schema
         movies.printSchema();
-        links.printSchema();
         ratings.printSchema();
-        tags.printSchema();
-        
+
         // print some data
 //        movies.show();
-//        links.show();
 //        ratings.show();
-//        tags.show();
 
         // get all comedies
         Dataset<Row> allComedies = movies.filter(movies.col("genres").like("%Comedy%"));
         //allComedies.show();
         //allComedies.write().format("json").save(outputPath+"/all-comedies");
 
-        // TODO: count all comedies that a user rates at least 3.0
-        //       (join ratings with movies, filter by rating, groupby userid and
-        //        aggregate count)
+        //Count all comedies that a user rates at least 3.0
+        //(join ratings with movies, filter by rating, groupby userid and
+        //aggregate count)
         Dataset<Row> goodComediesPerUser = ratings
                 .filter((ratings.col("rating").$greater$eq(3.0)))
                 .join(allComedies, "movieId")

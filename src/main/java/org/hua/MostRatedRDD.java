@@ -1,20 +1,16 @@
 package org.hua;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
-
-import java.util.Arrays;
 
 public class MostRatedRDD {
 
-    private static final Pattern COMMA = Pattern.compile(",");
+    private static final Pattern DELIMITER = Pattern.compile("::");
 
     public static void main(String[] args) throws Exception {
 
@@ -26,47 +22,46 @@ public class MostRatedRDD {
             System.exit(0);
         }
 
-        SparkConf sparkConf = new SparkConf().setAppName("MostRatedRDD").set("spark.hadoop.validateOutputSpecs", "false");
+        //spark configuration and spark context
+        SparkConf sparkConf = new SparkConf().setAppName("MostRatedRDD"); //.setMaster("local[2]").set("spark.driver.bindAddress", "127.0.0.1");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        JavaRDD<String> ratingsLines = sc.textFile(args[0] + "/ratings.csv");
+        //load ratings dataset
+        JavaRDD<String> ratingsLines = sc.textFile(args[0] + "/ratings.dat");
 
-        final String ratingsHeader = ratingsLines.first();
-
+        //RDD with <key,value> = <movieId,1>
         JavaPairRDD<String, Integer> movieIds = ratingsLines
-                .filter(s -> !s.equals(ratingsHeader))
                 .mapToPair(l -> {
-                    String[] lineTokens = COMMA.split(l);
+                    String[] lineTokens = DELIMITER.split(l);
                     String movieId = lineTokens[1];
                     return new Tuple2<>(movieId, 1);
                 });
 
-        JavaRDD<String> moviesLines = sc.textFile(args[0] + "/movies.csv");
-        final String moviesHeader = moviesLines.first();
+        //load movies dataset
+        JavaRDD<String> moviesLines = sc.textFile(args[0] + "/movies.dat");
 
+        //RDD with <key,value> = <movieId,title>
         JavaPairRDD<String, String> movieTitles = moviesLines
-                .filter(s -> !s.equals(moviesHeader))
                 .mapToPair(l -> {
-                    String[] lineTokens = COMMA.split(l);
+                    String[] lineTokens = DELIMITER.split(l);
                     String movieId = lineTokens[0];
-                    String genres = lineTokens[lineTokens.length - 1];
-                    String title = l.replace(movieId + ",", "").replace(","+genres, "");
-                    if (title.startsWith("\"") && title.endsWith("\""))
-                        title = title.substring(1,title.length()-1);
+                    String title = lineTokens[1];
                     return new Tuple2<>(movieId, title);
                 });
 
-        JavaPairRDD<Integer, String> mostRatedMovies = movieIds.reduceByKey(Integer::sum)
-                .join(movieTitles)
-                .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1, stringTuple2Tuple2._2._2))
-                .sortByKey(false);
+        //Query1: Find the 25 most rated movies using RDD
+        JavaPairRDD<Integer, String> mostRatedMovies = movieIds.reduceByKey(Integer::sum) //find total ratings for each movieId
+                .join(movieTitles)//join to take the title. RDD Tuple2<movieId, Tuple2<totalRatings, title>>
+                .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1, stringTuple2Tuple2._2._2))//Keep RDD Tuple2<totalRatings, title>
+                .sortByKey(false); //sort by key descending to take the first 25
 
+        //show the result
         for(Tuple2<Integer, String> pair:mostRatedMovies.take(25)) {
-            System.out.print(pair._1);
-            System.out.println(pair._2);
+            System.out.println("Total ratings: " + pair._1 + ", Movie title: " + pair._2);
         }
 
-        mostRatedMovies.saveAsTextFile(args[1]);
+        //write the result
+        mostRatedMovies.saveAsTextFile(args[1] + "/MostRatedRDD");
 
         sc.stop();
     }

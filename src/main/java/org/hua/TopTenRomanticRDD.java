@@ -13,14 +13,14 @@ import java.util.regex.Pattern;
 
 public class TopTenRomanticRDD {
 
-    private static final Pattern COMMA = Pattern.compile(",");
+    private static final Pattern DELIMITER = Pattern.compile("::");
 
-
+    //get month from timestamp
     public static long getMonthFromTimestamp(long timestamp) {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("UTC"));
         cal.setTimeInMillis(timestamp * 1000);
-        return cal.get(Calendar.MONTH) + 1;
+        return cal.get(Calendar.MONTH) + 1; //we add 1 to result, as Calendar.MONTH range is 0-11
     }
 
     public static void main(String[] args) {
@@ -34,17 +34,15 @@ public class TopTenRomanticRDD {
             System.exit(0);
         }
 
-        SparkConf sparkConf = new SparkConf().setAppName("TopTenRomanticRDD").set("spark.hadoop.validateOutputSpecs", "false");
+        SparkConf sparkConf = new SparkConf().setAppName("TopTenRomanticRDD");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
         //load ratings.csv
-        JavaRDD<String> ratingsLines = sc.textFile(args[0] + "/ratings.csv");
-        final String ratingsHeader = ratingsLines.first();
+        JavaRDD<String> ratingsLines = sc.textFile(args[0] + "/ratings.dat");
 
         JavaPairRDD<String, Tuple3<Double, Long, Integer>> ratings = ratingsLines
-                .filter(s -> !s.equals(ratingsHeader)) //remove header from data
                 .mapToPair(l -> {
-                    String[] lineTokens = COMMA.split(l);
+                    String[] lineTokens = DELIMITER.split(l);
                     String movieId = lineTokens[1];
                     Double rating = Double.parseDouble(lineTokens[2]);
                     Long timestamp = Long.parseLong(lineTokens[3]);
@@ -52,22 +50,19 @@ public class TopTenRomanticRDD {
                 });
 
         //load movies.csv
-        JavaRDD<String> moviesLines = sc.textFile(args[0] + "/movies.csv");
-        final String moviesHeader = moviesLines.first();
+        JavaRDD<String> moviesLines = sc.textFile(args[0] + "/movies.dat");
         //CASHING
 
         JavaPairRDD<String, Tuple2<String, String>> movieTitles = moviesLines
-                .filter(s -> !s.equals(moviesHeader)) //remove header from data
                 .mapToPair(l -> {
-                    String[] lineTokens = COMMA.split(l);
+                    String[] lineTokens = DELIMITER.split(l);
                     String movieId = lineTokens[0];
+                    String title = lineTokens[1];
                     String genres = lineTokens[lineTokens.length - 1];
-                    String title = l.replace(movieId + ",", "").replace(","+genres, "");
-                    if (title.startsWith("\"") && title.endsWith("\""))
-                        title = title.substring(1,title.length()-1);
                     return new Tuple2<>(movieId, new Tuple2<>(title, genres));
                 });
 
+        //Query3: Find the top 10 romantic movies for December
         //filter ratings for December,
         // reduceBy movieId and keep avg rating,
         // join with movies,
@@ -94,15 +89,11 @@ public class TopTenRomanticRDD {
 
         //print avg rating, title, genres
         for (Tuple2<Double, Tuple2<String, String>> pair : topTenRomantics.take(10)) {
-            System.out.print(pair._1);
-            System.out.print(" ");
-            System.out.print(pair._2._1);
-            System.out.print(" ");
-            System.out.println(pair._2._2);
+            System.out.println("Average rating: " + pair._1 + ", movie title: " + pair._2._1 + ", genres: " + pair._2._2);
         }
 
         //Save RDD as file
-        topTenRomantics.saveAsTextFile(args[1]);
+        topTenRomantics.saveAsTextFile(args[1] + "/TopTenRomanticRDD");
 
         sc.stop();
     }
