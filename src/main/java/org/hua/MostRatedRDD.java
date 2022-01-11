@@ -55,13 +55,16 @@ public class MostRatedRDD {
                 .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1, stringTuple2Tuple2._2._2))//Keep RDD Tuple2<totalRatings, title>
                 .sortByKey(false); //sort by key descending to take the first 25
 
+        JavaRDD<Tuple2<Integer, String>> mostRatedMovies25 = sc.parallelize(mostRatedMovies.take(25));
+
         //show the result
-        for(Tuple2<Integer, String> pair:mostRatedMovies.take(25)) {
+        for(Tuple2<Integer, String> pair:mostRatedMovies25.take(25)) {
             System.out.println("Total ratings: " + pair._1 + ", Movie title: " + pair._2);
         }
 
         //write the result
-        mostRatedMovies.saveAsTextFile(args[1] + "/MostRatedRDD");
+        mostRatedMovies25.saveAsTextFile(args[1] + "/MostRatedRDD");
+
 
         sc.stop();
     }
