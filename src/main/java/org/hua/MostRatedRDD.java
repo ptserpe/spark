@@ -14,16 +14,13 @@ public class MostRatedRDD {
 
     public static void main(String[] args) throws Exception {
 
-        boolean isLocal = false;
-        if (args.length == 0) {
-            isLocal = true;
-        } else if (args.length < 2) {
+       if (args.length < 2) {
             System.out.println("Usage: Example input-path output-path");
             System.exit(0);
         }
 
         //spark configuration and spark context
-        SparkConf sparkConf = new SparkConf().setAppName("MostRatedRDD"); //.setMaster("local[2]").set("spark.driver.bindAddress", "127.0.0.1");
+        SparkConf sparkConf = new SparkConf().setAppName("MostRatedRDD");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
         //load ratings dataset
@@ -52,7 +49,7 @@ public class MostRatedRDD {
         //Query1: Find the 25 most rated movies using RDD
         JavaPairRDD<Integer, String> mostRatedMovies = movieIds.reduceByKey(Integer::sum) //find total ratings for each movieId
                 .join(movieTitles)//join to take the title. RDD Tuple2<movieId, Tuple2<totalRatings, title>>
-                .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1, stringTuple2Tuple2._2._2))//Keep RDD Tuple2<totalRatings, title>
+                .mapToPair(movieRatingsMovieTitlePerMovieId -> new Tuple2<>(movieRatingsMovieTitlePerMovieId._2._1, movieRatingsMovieTitlePerMovieId._2._2))//Keep RDD Tuple2<totalRatings, title>
                 .sortByKey(false); //sort by key descending to take the first 25
 
         JavaRDD<Tuple2<Integer, String>> mostRatedMovies25 = sc.parallelize(mostRatedMovies.take(25));
@@ -64,7 +61,6 @@ public class MostRatedRDD {
 
         //write the result
         mostRatedMovies25.saveAsTextFile(args[1] + "/MostRatedRDD");
-
 
         sc.stop();
     }

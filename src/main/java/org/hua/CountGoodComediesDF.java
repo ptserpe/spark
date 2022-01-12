@@ -1,14 +1,13 @@
 package org.hua;
 
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.count;
 
-public class MostRatedDecDF {
+public class CountGoodComediesDF {
     public static void main(String[] args) throws Exception {
 
         boolean isLocal = false;
@@ -25,12 +24,12 @@ public class MostRatedDecDF {
             spark = SparkSession.builder().master("local").appName("Java Spark SQL example")
                     .getOrCreate();
             inputPath = "src/main/resources";
-            outputPath = "output";
+            outputPath= "output";
         } else {
             spark = SparkSession.builder().appName("Java Spark SQL example")
                     .getOrCreate();
             inputPath = args[0];
-            outputPath = args[1];
+            outputPath= args[1];
         }
 
         // load
@@ -50,29 +49,30 @@ public class MostRatedDecDF {
                 .withColumnRenamed("_c3", "timestamp");
         // schema
         //
-        // ratings.csv   userId,movieId,rating,timestamp
-        // movies.csv    movieId,title,genres
-        // print schema
-        movies.printSchema();
-        ratings.printSchema();
+        // ratings.dat   userId,movieId,rating,timestamp
+        // movies.dat    movieId,title,genres
 
-        // print some data
-//        movies.show();
-//        ratings.show();
 
-        //get month from timestamp
-        Column monthColumn = month(to_timestamp(ratings.col("timestamp").cast(DataTypes.LongType)));
+        // get all comedies
+        Dataset<Row> allComedies = movies.filter(movies.col("genres").like("%Comedy%"));
 
-        Dataset<Row> mostRatedDec = ratings
-                .withColumn("month", monthColumn)//add month to dataset
-                .filter(col("month").equalTo(12)) //filter for December
-                .groupBy(ratings.col("movieId"))
-                .agg(count(ratings.col(("userId"))).alias("count_users")) //avg rating per movie
-                .join(movies, "movieId") // avg rating per romantic movie
-                .orderBy(col("count_users").desc()); //sort descending
+        //Count all comedies that a user rates at least 3.0
+        //(join ratings with movies, filter by rating, groupby userid and
+        //aggregate count)
+        Dataset<Row> goodComedies = ratings
+                .filter((ratings.col("rating").$greater$eq(3.0)))
+                .join(allComedies, "movieId")
+                .distinct();
 
-        mostRatedDec.show();
-        mostRatedDec.write().format("json").save(outputPath + "/most-rated-december-movies");
+        long totalGoodComedies = goodComedies.count();
+
+        System.out.println("Total number of good comedies is: " + totalGoodComedies);
+
+        //show the result
+        goodComedies.show();
+
+        //write the result
+        goodComedies.write().format("json").save(outputPath+"/count-good-comedies");
 
         spark.close();
 

@@ -25,10 +25,6 @@ public class TopTenRomanticRDD {
 
     public static void main(String[] args) {
 
-        boolean isLocal = false;
-        if (args.length == 0) {
-            isLocal = true;
-        }
         if (args.length < 2) {
             System.out.println("Usage: Example input-path output-path");
             System.exit(0);
@@ -68,24 +64,26 @@ public class TopTenRomanticRDD {
         // join with movies,
         // filter Romantics
         //sort descending to take 10 first
-        JavaPairRDD<Double, Tuple2<String, String>> topTenRomantics = ratings
-                .filter(stringTuple3Tuple2 -> getMonthFromTimestamp(stringTuple3Tuple2._2._2()) == 12) //find all December ratings
-                .reduceByKey((doubleDateIntegerTuple3, doubleDateIntegerTuple31) -> {
-                    Double newRating = doubleDateIntegerTuple3._1() + doubleDateIntegerTuple31._1(); //sum of rating values
-                    Integer count = doubleDateIntegerTuple3._3() + doubleDateIntegerTuple31._3(); //number of ratings
-                    return new Tuple3<>(newRating, doubleDateIntegerTuple3._2(), count); // <sum of ratings, date, num of ratings> per movieId(key)
+        JavaPairRDD<Double, Tuple2<String, String>> topRomantics = ratings
+                .filter(ratingTimestampCountPerMovieId -> getMonthFromTimestamp(ratingTimestampCountPerMovieId._2._2()) == 12) //find all December ratings
+                .reduceByKey((ratingDecemberCountPerMovieId, ratingDecemberCountPerMovieIdNext) -> {
+                    Double newRating = ratingDecemberCountPerMovieId._1() + ratingDecemberCountPerMovieIdNext._1(); //sum of rating values
+                    Integer count = ratingDecemberCountPerMovieId._3() + ratingDecemberCountPerMovieIdNext._3(); //number of ratings
+                    return new Tuple3<>(newRating, ratingDecemberCountPerMovieId._2(), count); // <sum of ratings, date, num of ratings> per movieId(key)
                 })
                 .join(movieTitles)      //Tuple2<movieId,Tuple2<Tuple3<sum of ratings, date, num of ratings>, Tuple2<title,genres>>
-                .filter(tuple2Tuple2 -> tuple2Tuple2._2._2._2.contains("Romance")) //find all romantic movies at december
-                .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(
-                                stringTuple2Tuple2._2._1()._1() / stringTuple2Tuple2._2._1()._3(),
+                .filter(joinRatingsWithMovieTitlesOutput -> joinRatingsWithMovieTitlesOutput._2._2._2.contains("Romance")) //find all romantic movies at december
+                .mapToPair(joinRatingsWithRomanticOutput -> new Tuple2<>(
+                                joinRatingsWithRomanticOutput._2._1()._1() / joinRatingsWithRomanticOutput._2._1()._3(), //find the avg rating
                                 new Tuple2<>(
-                                        stringTuple2Tuple2._2._2._1,
-                                        stringTuple2Tuple2._2._2._2
+                                        joinRatingsWithRomanticOutput._2._2._1, //title
+                                        joinRatingsWithRomanticOutput._2._2._2 //genres
                                 )
                         )
                 )
                 .sortByKey(false); // Descending ordered Tuple2<avg rate,Tuple2<titles,genres>>
+
+        JavaRDD<Tuple2<Double, Tuple2<String, String>>> topTenRomantics = sc.parallelize(topRomantics.take(10));
 
         //print avg rating, title, genres
         for (Tuple2<Double, Tuple2<String, String>> pair : topTenRomantics.take(10)) {

@@ -15,10 +15,7 @@ public class GoodComediesPerUserRDD {
 
     public static void main(String[] args) throws Exception {
 
-        boolean isLocal = false;
-        if (args.length == 0) {
-            isLocal = true;
-        } else if (args.length < 2) {
+        if (args.length < 2) {
             System.out.println("Usage: Example input-path output-path");
             System.exit(0);
         }

@@ -37,6 +37,7 @@ public class GoodComediesPerUserDF {
         Dataset<Row> movies = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/movies.dat");
         Dataset<Row> ratings = spark.read().option("header", "false").option("delimiter", "::").csv(inputPath+"/ratings.dat");
 
+        //rename columns
         movies = movies
                 .withColumnRenamed("_c0", "movieId")
                 .withColumnRenamed("_c1", "title")
@@ -49,21 +50,12 @@ public class GoodComediesPerUserDF {
                 .withColumnRenamed("_c3", "timestamp");
         // schema
         //
-        // ratings.csv   userId,movieId,rating,timestamp
-        // movies.csv    movieId,title,genres
+        // ratings.dat   userId,movieId,rating,timestamp
+        // movies.dat    movieId,title,genres
 
-        // print schema
-        movies.printSchema();
-        ratings.printSchema();
-
-        // print some data
-//        movies.show();
-//        ratings.show();
 
         // get all comedies
         Dataset<Row> allComedies = movies.filter(movies.col("genres").like("%Comedy%"));
-        //allComedies.show();
-        //allComedies.write().format("json").save(outputPath+"/all-comedies");
 
         //Count all comedies that a user rates at least 3.0
         //(join ratings with movies, filter by rating, groupby userid and
@@ -75,10 +67,10 @@ public class GoodComediesPerUserDF {
                 .agg(count("*").alias("count"))
                 .orderBy(col("count").desc());
 
-        long size = goodComediesPerUser.count();
-        System.out.println(size);
+        //show the result
+        goodComediesPerUser.show();
 
-        goodComediesPerUser.show((int)size);
+        //write the result
         goodComediesPerUser.write().format("json").save(outputPath+"/good-comedies-per-user");
 
         spark.close();
