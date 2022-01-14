@@ -1,11 +1,12 @@
 package org.hua;
 
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.count;
+import java.util.Arrays;
+import java.util.List;
 
 public class CountGoodComediesDF {
     public static void main(String[] args) throws Exception {
@@ -62,17 +63,19 @@ public class CountGoodComediesDF {
         Dataset<Row> goodComedies = ratings
                 .filter((ratings.col("rating").$greater$eq(3.0)))
                 .join(allComedies, "movieId")
+                .select("movieId","title")
                 .distinct();
 
         long totalGoodComedies = goodComedies.count();
+        Dataset<Long> CountGoodComedies = spark.createDataset(Arrays.asList(totalGoodComedies), Encoders.LONG());
 
         System.out.println("Total number of good comedies is: " + totalGoodComedies);
 
         //show the result
-        goodComedies.show();
+        CountGoodComedies.show();
 
         //write the result
-        goodComedies.write().format("json").save(outputPath+"/count-good-comedies");
+        CountGoodComedies.write().format("json").save(outputPath+"/CountGoodComediesDF");
 
         spark.close();
 

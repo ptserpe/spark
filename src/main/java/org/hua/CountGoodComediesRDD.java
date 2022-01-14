@@ -6,6 +6,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import scala.Tuple2;
 
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 public class CountGoodComediesRDD {
@@ -56,13 +57,15 @@ public class CountGoodComediesRDD {
                 .map(joinComediesRatingsOutput ->  joinComediesRatingsOutput._2._2._1) //map to movie title
                 .distinct(); //remove duplicates
 
-        //find total number of good comedies
+        //find total number of good comedies and store to RDD
         long totalGoodComedies = goodComedies.count();
+        JavaRDD<Long> goodComediesCount = sc.parallelize(Arrays.asList(totalGoodComedies));
+
         //show the result
         System.out.println("Total comedies with at least one rating >= 3: " + totalGoodComedies);
 
         //write the movies
-        goodComedies.saveAsTextFile(args[1]+"/CountGoodComediesRDD");
+        goodComediesCount.saveAsTextFile(args[1]+"/CountGoodComediesRDD");
 
     }
 }
