@@ -86,8 +86,13 @@ public class TopTenRomanticRDD {
         JavaRDD<Tuple2<Double, Tuple2<String, String>>> topTenRomantics = sc.parallelize(topRomantics.take(10));
 
         //print avg rating, title, genres
-        for (Tuple2<Double, Tuple2<String, String>> pair : topTenRomantics.take(10)) {
-            System.out.println("Average rating: " + pair._1 + ", movie title: " + pair._2._1 + ", genres: " + pair._2._2);
+//        for (Tuple2<Double, Tuple2<String, String>> pair : topTenRomantics.take(10)) {
+//            System.out.println("Average rating: " + pair._1 + ", movie title: " + pair._2._1 + ", genres: " + pair._2._2);
+//        }
+
+        // collect RDD for printing
+        for(Tuple2<Double, Tuple2<String, String>> line:topTenRomantics.collect()) {
+            System.out.println("(average rating, (movie title, genres)): " + line);
         }
 
         //Save RDD as file
