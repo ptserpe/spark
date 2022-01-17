@@ -67,11 +67,8 @@ public class GoodComediesPerUserDF {
                 .agg(count("*").alias("count"))
                 .orderBy(col("count").desc());
 
-        //show the result
-        goodComediesPerUser.show();
-
         //write the result
-        goodComediesPerUser.write().format("json").save(outputPath+"/good-comedies-per-user");
+        goodComediesPerUser.write().format("json").save(outputPath+"/GoodComediesPerUserDF");
 
         spark.close();
 

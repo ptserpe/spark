@@ -48,17 +48,6 @@ public class MostRatedDecDF {
                 .withColumnRenamed("_c1", "movieId")
                 .withColumnRenamed("_c2", "rating")
                 .withColumnRenamed("_c3", "timestamp");
-        // schema
-        //
-        // ratings.csv   userId,movieId,rating,timestamp
-        // movies.csv    movieId,title,genres
-        // print schema
-        movies.printSchema();
-        ratings.printSchema();
-
-        // print some data
-//        movies.show();
-//        ratings.show();
 
         //get month from timestamp
         Column monthColumn = month(to_timestamp(ratings.col("timestamp").cast(DataTypes.LongType)));
@@ -71,8 +60,7 @@ public class MostRatedDecDF {
                 .join(movies, "movieId") // avg rating per romantic movie
                 .orderBy(col("count_users").desc()); //sort descending
 
-        mostRatedDec.show();
-        mostRatedDec.write().format("json").save(outputPath + "/most-rated-december-movies");
+        mostRatedDec.write().format("json").save(outputPath + "/MostRatedDecDF");
 
         spark.close();
 

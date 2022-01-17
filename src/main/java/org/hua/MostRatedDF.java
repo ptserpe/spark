@@ -48,18 +48,6 @@ public class MostRatedDF {
                 .withColumnRenamed("_c2", "rating")
                 .withColumnRenamed("_c3", "timestamp");
 
-        // schema
-        //
-        // ratings.csv   userId,movieId,rating,timestamp
-        // movies.csv    movieId,title,genres
-        // print schema
-        movies.printSchema();
-        ratings.printSchema();
-
-        // print some data
-        movies.show();
-        ratings.show();
-
         //Query1: Find the 25 most rated movies using dataframes
         //join ratings with movies, group by title,
         // aggregate count, order by descending and take the first 25
@@ -70,11 +58,8 @@ public class MostRatedDF {
                 .orderBy(col("count").desc())
                 .limit(25);
 
-        //show the result
-        mostRatedMovies.show(25);
-
         //write the result
-        mostRatedMovies.write().format("json").save(outputPath+"/most-rated-movies");
+        mostRatedMovies.write().format("json").save(outputPath+"/MostRatedDF");
 
         spark.close();
 

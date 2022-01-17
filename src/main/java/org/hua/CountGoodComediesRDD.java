@@ -61,11 +61,7 @@ public class CountGoodComediesRDD {
         long totalGoodComedies = goodComedies.count();
         JavaRDD<Long> goodComediesCount = sc.parallelize(Arrays.asList(totalGoodComedies));
 
-        //show the result
-        System.out.println("Total comedies with at least one rating >= 3: " + totalGoodComedies);
-
         //write the movies
         goodComediesCount.saveAsTextFile(args[1]+"/CountGoodComediesRDD");
-
     }
 }

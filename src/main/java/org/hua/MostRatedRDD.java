@@ -54,16 +54,6 @@ public class MostRatedRDD {
 
         JavaRDD<Tuple2<Integer, String>> mostRatedMovies25 = sc.parallelize(mostRatedMovies.take(25));
 
-        //show the result
-//        for(Tuple2<Integer, String> pair:mostRatedMovies25.take(25)) {
-//            System.out.println("Total ratings: " + pair._1 + ", Movie title: " + pair._2);
-//        }
-
-        // collect RDD for printing
-        for(Tuple2<Integer, String> line:mostRatedMovies25.collect()) {
-            System.out.println("(total ratings, movie title): " + line);
-        }
-
         //write the result
         mostRatedMovies25.saveAsTextFile(args[1] + "/MostRatedRDD");
 

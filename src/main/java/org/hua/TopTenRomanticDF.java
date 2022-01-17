@@ -48,17 +48,6 @@ public class TopTenRomanticDF {
                 .withColumnRenamed("_c1", "movieId")
                 .withColumnRenamed("_c2", "rating")
                 .withColumnRenamed("_c3", "timestamp");
-        // schema
-        //
-        // ratings.csv   userId,movieId,rating,timestamp
-        // movies.csv    movieId,title,genres
-        // print schema
-        movies.printSchema();
-        ratings.printSchema();
-
-        // print some data
-//        movies.show();
-//        ratings.show();
 
         // get all comedies
         Dataset<Row> allRomantics = movies.filter(movies.col("genres").like("%Romance%"));
@@ -76,11 +65,8 @@ public class TopTenRomanticDF {
                 .orderBy(col("avg_rating").desc())
                 .limit(10); //sort descending to take top 10
 
-        //print result
-        topTenRomantics.show(10);
-
         //write result
-        topTenRomantics.write().format("json").save(outputPath+"/top-ten-romantics");
+        topTenRomantics.write().format("json").save(outputPath+"/TopTenRomanticDF");
 
         spark.close();
 

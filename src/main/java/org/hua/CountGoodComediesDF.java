@@ -48,11 +48,6 @@ public class CountGoodComediesDF {
                 .withColumnRenamed("_c1", "movieId")
                 .withColumnRenamed("_c2", "rating")
                 .withColumnRenamed("_c3", "timestamp");
-        // schema
-        //
-        // ratings.dat   userId,movieId,rating,timestamp
-        // movies.dat    movieId,title,genres
-
 
         // get all comedies
         Dataset<Row> allComedies = movies.filter(movies.col("genres").like("%Comedy%"));
@@ -67,15 +62,10 @@ public class CountGoodComediesDF {
                 .distinct();
 
         long totalGoodComedies = goodComedies.count();
-        Dataset<Long> CountGoodComedies = spark.createDataset(Arrays.asList(totalGoodComedies), Encoders.LONG());
-
-        System.out.println("Total number of good comedies is: " + totalGoodComedies);
-
-        //show the result
-        CountGoodComedies.show();
+        Dataset<Long> goodComediesCount = spark.createDataset(Arrays.asList(totalGoodComedies), Encoders.LONG());
 
         //write the result
-        CountGoodComedies.write().format("json").save(outputPath+"/CountGoodComediesDF");
+        goodComediesCount.write().format("json").save(outputPath+"/CountGoodComediesDF");
 
         spark.close();
 

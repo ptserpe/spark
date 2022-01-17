@@ -57,9 +57,6 @@ public class GoodComediesPerUserRDD {
                 .mapToPair(stringTuple2Tuple2 -> new Tuple2<>(stringTuple2Tuple2._2._1._1, 1)) //new Tuple2<>(userId,1)
                 .reduceByKey(Integer::sum);
 
-        //userId, totalRatingsGTE3AtComedies
-        System.out.println(goodComediesPerUser.take(30));
-
         //write the result
         goodComediesPerUser.saveAsTextFile(args[1]+"/GoodComediesPerUserRDD");
 
